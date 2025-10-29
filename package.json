@@ -1,0 +1,38 @@
+{
+  "name": "os-lrm",
+  "version": "1.0.0",
+  "description": "Operating System Local Ressources Monitoring (OS-LRM). Une Application Web qui fait le Monitoring des Ressources Locales du Système d'Exploitation.",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JeySofts/OS-LRM.git"
+  },
+  "keywords": [
+    "Local",
+    "Ressources",
+    "CPU",
+    "RAM",
+    "System",
+    "OS",
+    "LRM",
+    "Monitoring",
+    "Operating",
+    "Single"
+  ],
+  "author": "JeySoft",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/JeySofts/OS-LRM/issues"
+  },
+  "homepage": "https://github.com/JeySofts/OS-LRM#readme",
+  "dependencies": {
+    "express": "^4.18.2",
+    "influx": "^5.10.0",
+    "pidusage": "^3.0.0",
+    "socket.io": "^4.7.2"
+  }
+}

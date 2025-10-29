@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full bg-gray-100">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Monitoring CPU & RAM</title>
+
+    <!-- Socket.io (client) - Corrigé : Utilisation d'un CDN -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Configuration de Tailwind (police Inter) -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+
+    <style>
+        /* Assurer que le canvas s'adapte à son conteneur */
+        #chart {
+            width: 100% !important;
+            height: 100% !important;
+        }
+    </style>
+</head>
+<body class="h-full font-sans antialiased">
+
+<main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+
+    <!-- En-tête -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Dashboard de Monitoring</h1>
+        <p class="text-gray-500 mt-1">Statut en temps réel du système (CPU & RAM)</p>
+    </div>
+
+    <!-- Grille des Widgets -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Widget CPU -->
+        <div class="bg-white p-6 rounded-2xl shadow-lg transition-all hover:shadow-xl">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-lg font-semibold text-gray-700">Utilisation CPU</h2>
+                <!-- Icône CPU -->
+                <svg class="w-8 h-8 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                </svg>
+            </div>
+            <div id="cpu" class="text-5xl font-extrabold text-red-500">0%</div>
+            <p class="text-sm text-gray-400 mt-2">Utilisation actuelle du processeur</p>
+        </div>
+
+        <!-- Widget RAM -->
+        <div class="bg-white p-6 rounded-2xl shadow-lg transition-all hover:shadow-xl">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-lg font-semibold text-gray-700">Utilisation RAM</h2>
+                <!-- Icône RAM (Memory) -->
+                <svg class="w-8 h-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3M19.5 8.25h1.5M8.25 19.5V21M12 4.5a7.5 7.5 0 00-7.5 7.5v3a3 3 0 003 3h9a3 3 0 003-3v-3a7.5 7.5 0 00-7.5-7.5z" />
+                </svg>
+            </div>
+            <div id="ram" class="text-5xl font-extrabold text-blue-500">0%</div>
+            <p class="text-sm text-gray-400 mt-2">Utilisation actuelle de la mémoire</p>
+        </div>
+
+        <!-- Widget Graphique -->
+        <div class="bg-white p-6 rounded-2xl shadow-lg md:col-span-2">
+            <h2 class="text-lg font-semibold text-gray-700 mb-4">Historique d'Utilisation (30 dernières sec.)</h2>
+            <!-- Conteneur responsive pour le graphique -->
+            <div class="relative h-64 md:h-96">
+                <canvas id="chart"></canvas>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<script>
+    // Correction : Envelopper le script dans un écouteur DOMContentLoaded
+    // Cela garantit que le script ne s'exécute qu'une fois le DOM entièrement chargé.
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialisation de Socket.io
+        const socket = io();
+
+        const cpuEl = document.getElementById('cpu');
+        const ramEl = document.getElementById('ram');
+        const ctx = document.getElementById('chart').getContext('2d');
+
+        // Configuration des données du graphique
+        const data = {
+            labels: [],
+            datasets: [
+                {
+                    label: 'CPU (%)',
+                    data: [],
+                    borderColor: 'rgb(239, 68, 68)',       // text-red-500
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                },
+                {
+                    label: 'RAM (%)',
+                    data: [],
+                    borderColor: 'rgb(59, 130, 246)',      // text-blue-500
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                }
+            ]
+        };
+
+        // Configuration des options du graphique
+        const config = {
+            type: 'line',
+            data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false, // Important pour le conteneur responsive
+                animation: {
+                    duration: 0 // Désactiver l'animation pour le temps réel
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Temps', color: '#6b7280' },
+                        ticks: { color: '#6b7280' },
+                        grid: { display: false }
+                    },
+                    y: {
+                        min: 0,
+                        max: 100,
+                        title: { display: true, text: 'Utilisation (%)', color: '#6b7280' },
+                        ticks: { color: '#6b7280' },
+                        grid: { color: 'rgba(0, 0, 0, 0.05)' } // Grille Y très légère
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#111827' // text-gray-900
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index',
+                },
+            }
+        };
+
+        // Initialisation du graphique
+        const chart = new Chart(ctx, config);
+
+        const MAX_POINTS = 30; // Garder 30 points de données
+
+        // Écoute des événements socket
+        socket.on('metrics', (m) => {
+            // S'assurer que les éléments existent avant de les mettre à jour
+            if (cpuEl && ramEl) {
+                cpuEl.textContent = `${m.cpu}%`;
+                ramEl.textContent = `${m.ram}%`;
+            }
+
+            // Gestion des données du graphique (FIFO)
+            if (data.labels.length >= MAX_POINTS) {
+                data.labels.shift();
+                data.datasets[0].data.shift();
+                data.datasets[1].data.shift();
+            }
+
+            data.labels.push(new Date().toLocaleTimeString('fr-FR'));
+            data.datasets[0].data.push(m.cpu);
+            data.datasets[1].data.push(m.ram);
+
+            // Mise à jour du graphique sans animation
+            chart.update('none');
+        });
+    });
+</script>
+</body>
+</html>
+

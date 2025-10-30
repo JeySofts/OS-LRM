@@ -1,0 +1,27 @@
+{
+  "title": "OS-LRM - System Metrics",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "CPU (%)",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": "InfluxDB",
+          "query": "SELECT mean(\"cpu\") FROM \"system_metrics\" WHERE $timeFilter GROUP BY time($__interval) fill(null)"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "RAM (%)",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": "InfluxDB",
+          "query": "SELECT mean(\"ram\") FROM \"system_metrics\" WHERE $timeFilter GROUP BY time($__interval) fill(null)"
+        }
+      ]
+    }
+  ]
+}

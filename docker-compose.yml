@@ -11,6 +11,11 @@ services:
     environment:
       - INFLUXDB_DB=metrics_db
       - INFLUXDB_ADMIN_ENABLED=true
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sS http://localhost:8086/ping || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   app:
     build: .
@@ -19,11 +24,18 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - influxdb
+      influxdb:
+        condition: service_healthy
+    env_file: .env
     environment:
-      - INFLUX_HOST=influxdb
-      - INFLUX_DB=metrics_db
-      - SAMPLE_INTERVAL_MS=1000
+      - INFLUX_HOST=${INFLUX_HOST}
+      - INFLUX_DB=${INFLUX_DB}
+      - SAMPLE_INTERVAL_MS=${SAMPLE_INTERVAL_MS}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   grafana:
     image: grafana/grafana:latest
@@ -31,13 +43,23 @@ services:
     restart: unless-stopped
     ports:
       - "3001:3000"
+    env_file: .env
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_DASHBOARDS_JSON_ENABLED=true
+      - GF_DASHBOARDS_JSON_PATH=/var/lib/grafana/dashboards
     depends_on:
       - influxdb
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./provisioning/grafana:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
 volumes:
   influxdb_data:

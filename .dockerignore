@@ -1,0 +1,13 @@
+node_modules
+.git
+.env
+.env.local
+npm-debug.log
+Dockerfile
+docker-compose.yml
+.vscode
+.idea
+dist
+coverage
+*.log
+public/vendor
